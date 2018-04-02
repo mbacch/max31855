@@ -1,16 +1,18 @@
 # `max31855`
 
-> A platform agnostic driver to interface with the MAX31855 (Cold-Junction Compensated Thermocouple-to-Digital Converter)
+A platform agnostic driver to interface with the MAX31855 (Cold-Junction Compensated Thermocouple-to-Digital Converter)
 
 ## What works
 
-- Reading the thermocouple, cold junction reference temperature, fault status bits. All readings are raw from the ADC. See TO DO for going forward.
+- Reading the thermocouple, cold junction reference temperature, fault status bits. All readings are raw from the ADC. See TO DO for going forward work.
+- Currently testing with the MAX31855K and a Type K Thermocouple (Using the Sparkfun Thermocouple Breakout)
 
 ## TODO
 
 - [ ] Add interface for calibrated temperatures (current interface provides raw values from ADC)
 - [ ] Additional fault management with the fault status bits. e.g. How to handle interface when faults are present?
 - [ ] Need to support signed integers (currently using u16. Need to use i16 and handle signed bit correctly).
+- [ ] Test on Raspberry Pi (currently testing on the DISCOVERY)
 
 ## Examples
 
