@@ -1,0 +1,13 @@
+[package]
+authors = ["Mark Bacchetti <mbacchx@gmail.com>"]
+categories = ["embedded", "hardware-support", "no-std"]
+description = "A platform agnostic driver to interface the MAX31855 (thermocouple)"
+keywords = ["embedded-hal-driver", "thermocouple","digital converter"]
+license = "MIT OR Apache-2.0"
+name = "max31855"
+repository = "https://github.com/mbacch/max31855"
+version = "0.1.0"
+
+[dependencies]
+bit_field = "0.9.0"
+embedded-hal = "0.1.2"
