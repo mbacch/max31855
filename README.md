@@ -16,6 +16,9 @@ A platform agnostic driver to interface with the MAX31855 (Cold-Junction Compens
 - [ ] Test on Raspberry Pi (currently testing on the DISCOVERY)
 - [ ] Finish read_all interface
 - [ ] Perform fault testing (ensure fault bits work correctly)
+- [ ] Improve code documentation
+- [ ] Setup unit tests
+- [ ] Clean up naming (e.g. someetimes it Hot Reference Junction sometimes its temeperature sometimes its thermocouple
 
 ## Examples
 
