@@ -94,22 +94,16 @@ impl<SPI, CS, E> Max31855<SPI, CS>
     //     12 bit measurement
     fn to_i16(&mut self, unsigned_val: u16, sensor_type: SensorType) -> i16 {
         match sensor_type {
-            SensorType::HotRefJunction => self.convert(
-						unsigned_val,
-						Convert {
-							bit_num: 13,
-							divisor: 4,
-							bit_shift: 2,
-						}
-					   ), 
-            SensorType::ColdRefJunction => self.convert(
-						unsigned_val,
-						Convert {
-							bit_num: 11,
-							divisor: 16,
-							bit_shift: 4,
-						}
-					    ),
+            SensorType::HotRefJunction => 
+                self.convert(
+		    unsigned_val,
+		    Convert {bit_num: 13, divisor: 4, bit_shift: 2}
+		), 
+            SensorType::ColdRefJunction => 
+		self.convert(
+		    unsigned_val,
+		    Convert {bit_num: 11, divisor: 16, bit_shift: 4}
+		)
         }
     }
 
