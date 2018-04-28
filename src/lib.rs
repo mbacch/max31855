@@ -1,10 +1,3 @@
-//! A platform agnostic driver to interface with the MAX31855 (thermocouple digital converter)
-//!
-//! This driver was built using [`embedded-hal`] traits.
-
-//#![deny(missing_docs)]
-//#![deny(warnings)]
-//#![feature(unsize)]
 #![no_std]
 
 extern crate embedded_hal as hal;
@@ -38,7 +31,7 @@ impl<SPI, CS, E> Max31855<SPI, CS>
     }
 
     /// Read data from SPI peripheral
-    pub fn read(&mut self) -> Result<Measurements, E> {
+    fn read_spi(&mut self) -> Result<Raw, E> {
         
         self.cs.set_low();
         
@@ -48,15 +41,15 @@ impl<SPI, CS, E> Max31855<SPI, CS>
         self.cs.set_high();
         
         // Combine array of u8 to a u32 (MSB to LSB)
-        let r = ((buffer[0] as u32) << 24) |
-                ((buffer[1] as u32) << 16) |
-                ((buffer[2] as u32) <<  8) |
-                 (buffer[3] as u32);
+        let r: u32 = ((buffer[0] as u32) << 24) |
+                     ((buffer[1] as u32) << 16) |
+                     ((buffer[2] as u32) <<  8) |
+                      (buffer[3] as u32);
 
         Ok(
-            Measurements{
-                tc_temperature: r.get_bits(18..32) as u16,
-                cj_temperature: r.get_bits(4..15)  as u16,
+            Raw {
+                temperature: self.to_i16(r.get_bits(18..32) as u16, SensorType::HotRefJunction),
+                cold_reference: self.to_i16(r.get_bits(4..15) as u16, SensorType::ColdRefJunction),
                 fault: r.get_bit(16) as bool,
                 scv: r.get_bit(2) as bool,
                 scg: r.get_bit(1) as bool,
@@ -65,37 +58,143 @@ impl<SPI, CS, E> Max31855<SPI, CS>
         )
     }
 
-    // TODO Add interface with calibrated values
-    // pub fn read_calibrated(units: Units) -> Result<TBD, E> {
-    //     unimplemented!();
-    // }
+    /// Return the thermocouple temperature measurement
+    pub fn read_thermocouple(&mut self, unit: Units) -> Result<f32, E> {
 
-    // TODO Check for faults and returns true if fault exists
-    //fn check_fault() -> bool {
-    //    unimplemented!();
-    //}
+        let raw = self.read_spi()?;
+
+        if raw.fault {
+            Ok(0.0) // TODO return NAN
+        } else {
+            Ok(self.calibrate_thermocouple(raw.temperature, unit))
+        }
+    }
+
+    /// Read, convert to units and return all measurements
+    pub fn real_all(&mut self, unit: Units) -> Result<Measurement, E> {
+        unimplemented!();
+	
+    // To do: Need to figure out borrowing for using unit twice
+    /*let raw = self.read_spi()?;
+
+        Ok(
+            Measurement{
+                temperature: calibrate_thermocouple(raw.temperature, unit),
+                cold_reference: calibrate_reference(raw.cold_reference, unit),
+                fault: raw.fault,
+                scv: raw.scv,
+                scg: raw.scg,
+                oc: raw.oc,
+            }
+        )*/
+    }
+
+    // Interface to convert temperature measurements from u16 to i16. Supports two sensors
+    //     HotRefJunction which is the 14 bit measurement and ColdRefJunction which is the
+    //     12 bit measurement
+    fn to_i16(&mut self, unsigned_val: u16, sensor_type: SensorType) -> i16 {
+        match sensor_type {
+            SensorType::HotRefJunction => self.convert(
+						unsigned_val,
+						Convert {
+							bit_num: 13,
+							divisor: 4,
+							bit_shift: 2,
+						}
+					   ), 
+            SensorType::ColdRefJunction => self.convert(
+						unsigned_val,
+						Convert {
+							bit_num: 11,
+							divisor: 16,
+							bit_shift: 4,
+						}
+					    ),
+        }
+    }
+
+    // Converts a u16 to i16 with the Convert type structure
+    fn convert(&mut self, unsigned_val: u16, c: Convert) -> i16 {
+        if unsigned_val.get_bit(c.bit_num) as bool {
+            ((unsigned_val << c.bit_shift) as i16) / c.divisor
+        } else {
+            unsigned_val as i16
+        }
+    }
+
+    // Calibrates the hot reference junction (14 bit measurement)
+    fn calibrate_thermocouple(&mut self, count: i16, unit: Units) -> f32 {
+        match unit {
+            Units::Count      => (count as f32), // for debugging
+            Units::Celsius    => (count as f32) * 0.25,
+            Units::Fahrenheit => (count as f32) * 0.45 + 32.0,
+            Units::Kelvin     => (count as f32) * 0.45 + 491.67,
+        }
+    }
+
+    // Calibrates the cold reference junction (12 bit measurement)
+    fn calibrate_reference(&mut self, count: i16, unit: Units) -> f32 {
+        match unit {
+            Units::Count      => (count as f32), // for debugging
+            Units::Celsius    => (count as f32) * 0.0625,
+            Units::Fahrenheit => (count as f32) * 0.1125 + 32.0,
+            Units::Kelvin     => (count as f32) * 0.1125 + 491.67,
+        }
+    }
 }
 
-// TODO Units Enumeration
-//pub enum Units {
-//    Celsius,
-//    Fahrenheit,
-//    Kelvin,
-//}
+/// Units Enumeration
+pub enum Units {
+    Count,
+    Celsius,
+    Fahrenheit,
+    Kelvin,
+}
 
-/// Thermocouple and Reference Junction Measurements
-// TODO Look into modifying structure to include calibrated and uncalibrated data
-pub struct Measurements {
+/// Sensor Types Enumeration
+pub enum SensorType {
+    HotRefJunction,
+    ColdRefJunction,
+}
+
+// Structure to convert different bit length 
+//   measurements from i16 to u16
+struct Convert {
+    bit_num: usize,
+    divisor: i16,
+    bit_shift: u8,
+} 
+
+/// Calibrated measurements from MAX31855
+#[allow(dead_code)]
+pub struct Measurement {
     /// Thermocouple temperature measurement
-    tc_temperature: u16,  // TODO this needs to be signed. Ok for now if positive Celsius
+    temperature: f32,
     /// Reference junction temperature measurement
-    cj_temperature: u16,  // TODO this needs to be signed. Ok for now if positive Celsius
-    /// Roll-up Fault Bit
+    cold_reference: f32,
+    /// Fault roll up
     fault: bool,
-    /// Short Circuit Fault to Voltage (VCC)
+    /// SCV fault
     scv: bool,
-    /// Short Circuit Fault to Ground (GND)
+    /// SCG fault
     scg: bool,
-    /// Open Circuit Fault (No Connections)
-    oc:  bool,
+    /// OC fault
+    oc: bool,
+}
+
+/// Uncalibrated mesurements from MAX31855
+#[allow(dead_code)]
+struct Raw {
+    /// Thermocouple temperature measurement
+    temperature: i16,
+    /// Reference junction temperature measurement
+    cold_reference: i16,
+    /// Fault roll up
+    fault: bool,
+    /// SCV fault
+    scv: bool,
+    /// SCG fault  
+    scg: bool,
+    /// OC fault
+    oc: bool,
 }
