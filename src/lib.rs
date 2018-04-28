@@ -152,7 +152,7 @@ pub enum Units {
 }
 
 /// Sensor Types Enumeration
-pub enum SensorType {
+enum SensorType {
     HotRefJunction,
     ColdRefJunction,
 }
