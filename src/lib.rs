@@ -3,6 +3,7 @@
 extern crate embedded_hal as hal;
 extern crate bit_field;
 
+use core::f32::NAN;
 use hal::blocking::spi::Transfer;
 use hal::spi::{Mode, Phase, Polarity};
 use hal::digital::OutputPin;
@@ -64,7 +65,7 @@ impl<SPI, CS, E> Max31855<SPI, CS>
         let raw = self.read_spi()?;
 
         if raw.fault {
-            Ok(0.0) // TODO return NAN
+            Ok(NAN)
         } else {
             Ok(self.calibrate_thermocouple(raw.temperature, unit))
         }
