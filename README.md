@@ -14,7 +14,7 @@ A platform agnostic driver to interface with the MAX31855 (Cold-Junction Compens
 - [ ] Additional fault management with the fault status bits. e.g. How to handle interface when faults are present? Partially done, need to pass NAN when fault exists
 - [x] Need to support signed integers (currently using u16. Need to use i16 and handle signed bit correctly).
 - [ ] Test on Raspberry Pi (currently testing on the DISCOVERY)
-- [ ] Finish read_all interface
+- [x] Finish read_all interface
 - [ ] Perform fault testing (ensure fault bits work correctly)
 - [ ] Improve code documentation
 - [ ] Setup unit tests
