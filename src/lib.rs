@@ -67,27 +67,25 @@ impl<SPI, CS, E> Max31855<SPI, CS>
         if raw.fault {
             Ok(NAN)
         } else {
-            Ok(self.calibrate_thermocouple(raw.temperature, unit))
+            Ok(self.calibrate_thermocouple(raw.temperature, &unit))
         }
     }
 
     /// Read, convert to units and return all measurements
-    pub fn real_all(&mut self, unit: Units) -> Result<Measurement, E> {
-        unimplemented!();
+    pub fn read_all(&mut self, unit: Units) -> Result<Measurement, E> {
 	
-    // To do: Need to figure out borrowing for using unit twice
-    /*let raw = self.read_spi()?;
+        let raw = self.read_spi()?;
 
         Ok(
-            Measurement{
-                temperature: calibrate_thermocouple(raw.temperature, unit),
-                cold_reference: calibrate_reference(raw.cold_reference, unit),
+            Measurement {
+                temperature: self.calibrate_thermocouple(raw.temperature, &unit),
+                cold_reference: self.calibrate_reference(raw.cold_reference, &unit),
                 fault: raw.fault,
                 scv: raw.scv,
                 scg: raw.scg,
                 oc: raw.oc,
             }
-        )*/
+        ) 
     }
 
     // Interface to convert temperature measurements from u16 to i16. Supports two sensors
@@ -118,22 +116,22 @@ impl<SPI, CS, E> Max31855<SPI, CS>
     }
 
     // Calibrates the hot reference junction (14 bit measurement)
-    fn calibrate_thermocouple(&mut self, count: i16, unit: Units) -> f32 {
-        match unit {
+    fn calibrate_thermocouple(&mut self, count: i16, unit: &Units) -> f32 {
+        match *unit {
             Units::Count      => (count as f32), // for debugging
             Units::Celsius    => (count as f32) * 0.25,
             Units::Fahrenheit => (count as f32) * 0.45 + 32.0,
-            Units::Kelvin     => (count as f32) * 0.45 + 491.67,
+            Units::Kelvin     => (count as f32) * 0.45 + 491.67, // TODO Incorrect cal
         }
     }
 
     // Calibrates the cold reference junction (12 bit measurement)
-    fn calibrate_reference(&mut self, count: i16, unit: Units) -> f32 {
-        match unit {
+    fn calibrate_reference(&mut self, count: i16, unit: &Units) -> f32 {
+        match *unit {
             Units::Count      => (count as f32), // for debugging
             Units::Celsius    => (count as f32) * 0.0625,
             Units::Fahrenheit => (count as f32) * 0.1125 + 32.0,
-            Units::Kelvin     => (count as f32) * 0.1125 + 491.67,
+            Units::Kelvin     => (count as f32) * 0.1125 + 491.67, // TODO Incorrect cal
         }
     }
 }
