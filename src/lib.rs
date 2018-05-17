@@ -162,17 +162,17 @@ struct Convert {
 #[allow(dead_code)]
 pub struct Measurement {
     /// Thermocouple temperature measurement
-    temperature: f32,
+    pub temperature: f32,
     /// Reference junction temperature measurement
-    cold_reference: f32,
+    pub cold_reference: f32,
     /// Fault roll up
-    fault: bool,
+    pub fault: bool,
     /// SCV fault
-    scv: bool,
+    pub scv: bool,
     /// SCG fault
-    scg: bool,
+    pub scg: bool,
     /// OC fault
-    oc: bool,
+    pub oc: bool,
 }
 
 /// Uncalibrated mesurements from MAX31855
