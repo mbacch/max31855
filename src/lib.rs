@@ -147,9 +147,13 @@ impl<SPI, CS, E> Max31855<SPI, CS>
 
 /// Units Enumeration
 pub enum Units {
+    /// Represent temperatures in ADC Counts
     Count,
+    /// Represent temperatures in Celsius
     Celsius,
+    /// Represent temperatures in Fahrenheit
     Fahrenheit,
+    /// Represent temperatures in Kelvin
     Kelvin,
 }
 
