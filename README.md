@@ -11,12 +11,12 @@ A platform agnostic driver to interface with the MAX31855 (Cold-Junction Compens
 ## TODO
 
 - [x] Add interface for calibrated temperatures (current interface provides raw values from ADC)
-- [ ] Additional fault management with the fault status bits. e.g. How to handle interface when faults are present? Partially done, need to pass NAN when fault exists
+- [x] Additional fault management with the fault status bits. e.g. How to handle interface when faults are present? Partially done, need to pass NAN when fault exists
 - [x] Need to support signed integers (currently using u16. Need to use i16 and handle signed bit correctly).
-- [ ] Test on Raspberry Pi (currently testing on the DISCOVERY)
+- [x] Test on Raspberry Pi (currently testing on the DISCOVERY)
 - [x] Finish read_all interface
 - [ ] Perform fault testing (ensure fault bits work correctly)
-- [ ] Improve code documentation
+- [x] Improve code documentation
 - [ ] Setup unit tests
 - [ ] Clean up naming (e.g. someetimes it Hot Reference Junction sometimes its temeperature sometimes its thermocouple
 
