@@ -1,3 +1,12 @@
+//! A platform agnostic driver to interface with the MAX31855
+//! //!
+//! //! This driver was built using [`embedded-hal`] traits.
+//! //!
+//! //! [`embedded-hal`]: https://docs.rs/embedded-hal/~0.1
+//! //!
+
+#![deny(missing_docs)]
+#![deny(warnings)]
 #![no_std]
 
 extern crate embedded_hal as hal;
@@ -71,7 +80,7 @@ impl<SPI, CS, E> Max31855<SPI, CS>
         }
     }
 
-    /// Read, convert to units and return all measurements
+    /// Returns all measurements from the MAX31855
     pub fn read_all(&mut self, unit: Units) -> Result<Measurement, E> {
 	
         let raw = self.read_spi()?;
@@ -88,25 +97,25 @@ impl<SPI, CS, E> Max31855<SPI, CS>
         ) 
     }
 
-    // Interface to convert temperature measurements from u16 to i16. Supports two sensors
-    //     HotRefJunction which is the 14 bit measurement and ColdRefJunction which is the
-    //     12 bit measurement
+    /// Interface to convert temperature measurements from u16 to i16. Supports two sensors
+    ///     HotRefJunction which is the 14 bit measurement and ColdRefJunction which is the
+    ///     12 bit measurement
     fn to_i16(&mut self, unsigned_val: u16, sensor_type: SensorType) -> i16 {
         match sensor_type {
             SensorType::HotRefJunction => 
-                self.convert(
-		    unsigned_val,
-		    Convert {bit_num: 13, divisor: 4, bit_shift: 2}
-		), 
+                 self.convert(
+		              unsigned_val,
+		              Convert {bit_num: 13, divisor: 4, bit_shift: 2}
+		         ), 
             SensorType::ColdRefJunction => 
-		self.convert(
-		    unsigned_val,
-		    Convert {bit_num: 11, divisor: 16, bit_shift: 4}
-		)
+		         self.convert(
+		              unsigned_val,
+		              Convert {bit_num: 11, divisor: 16, bit_shift: 4}
+		         )
         }
     }
 
-    // Converts a u16 to i16 with the Convert type structure
+    /// Converts a u16 to i16 with the Convert type structure
     fn convert(&mut self, unsigned_val: u16, c: Convert) -> i16 {
         if unsigned_val.get_bit(c.bit_num) as bool {
             ((unsigned_val << c.bit_shift) as i16) / c.divisor
@@ -115,23 +124,23 @@ impl<SPI, CS, E> Max31855<SPI, CS>
         }
     }
 
-    // Calibrates the hot reference junction (14 bit measurement)
+    /// Calibrates the thermocouple (14 bit measurement)
     fn calibrate_thermocouple(&mut self, count: i16, unit: &Units) -> f32 {
         match *unit {
             Units::Count      => (count as f32), // for debugging
             Units::Celsius    => (count as f32) * 0.25,
             Units::Fahrenheit => (count as f32) * 0.45 + 32.0,
-            Units::Kelvin     => (count as f32) * 0.45 + 491.67, // TODO Incorrect cal
+            Units::Kelvin     => (count as f32) * 0.25 + 273.15,
         }
     }
 
-    // Calibrates the cold reference junction (12 bit measurement)
+    /// Calibrates the cold reference junction (12 bit measurement)
     fn calibrate_reference(&mut self, count: i16, unit: &Units) -> f32 {
         match *unit {
             Units::Count      => (count as f32), // for debugging
             Units::Celsius    => (count as f32) * 0.0625,
             Units::Fahrenheit => (count as f32) * 0.1125 + 32.0,
-            Units::Kelvin     => (count as f32) * 0.1125 + 491.67, // TODO Incorrect cal
+            Units::Kelvin     => (count as f32) * 0.0625 + 273.15,
         }
     }
 }
@@ -150,8 +159,8 @@ enum SensorType {
     ColdRefJunction,
 }
 
-// Structure to convert different bit length 
-//   measurements from i16 to u16
+/// Structure to convert different bit length 
+///   measurements from i16 to u16
 struct Convert {
     bit_num: usize,
     divisor: i16,
@@ -162,17 +171,17 @@ struct Convert {
 #[allow(dead_code)]
 pub struct Measurement {
     /// Thermocouple temperature measurement
-    temperature: f32,
+    pub temperature: f32,
     /// Reference junction temperature measurement
-    cold_reference: f32,
+    pub cold_reference: f32,
     /// Fault roll up
-    fault: bool,
+    pub fault: bool,
     /// SCV fault
-    scv: bool,
+    pub scv: bool,
     /// SCG fault
-    scg: bool,
+    pub scg: bool,
     /// OC fault
-    oc: bool,
+    pub oc: bool,
 }
 
 /// Uncalibrated mesurements from MAX31855
