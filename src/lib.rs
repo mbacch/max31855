@@ -12,7 +12,6 @@
 extern crate embedded_hal as hal;
 extern crate bit_field;
 
-use core::f32::NAN;
 use hal::blocking::spi::Transfer;
 use hal::spi::{Mode, Phase, Polarity};
 use hal::digital::OutputPin;
@@ -30,6 +29,26 @@ pub struct Max31855<SPI, CS> {
     cs: CS,
 }
 
+/// MAX31855 specific errors
+#[derive(Debug)]
+pub struct Max31855Error {
+    /// Thermocouple is sort circuited to Vcc
+    scvfault: bool,
+    /// Thermocouple is sort circuited to ground
+    scgfault: bool,
+    /// Thermocouple is open circuited
+    ocfault: bool
+}
+
+/// Errors this drive can return
+#[derive(Debug)]
+pub enum Error<E> {
+    /// Error caused by Max31855 sensor
+    SensorError(Max31855Error),
+    /// Error caused by SPI interface
+    SPIError(E)
+}
+
 impl<SPI, CS, E> Max31855<SPI, CS>
     where SPI: Transfer<u8, Error = E>,
           CS:  OutputPin
@@ -42,14 +61,14 @@ impl<SPI, CS, E> Max31855<SPI, CS>
 
     /// Read data from SPI peripheral
     fn read_spi(&mut self) -> Result<Raw, E> {
-        
+
         self.cs.set_low();
-        
+
         let mut buffer = [0u8; 4];
         self.spi.transfer(&mut buffer)?;
-        
+
         self.cs.set_high();
-        
+
         // Combine array of u8 to a u32 (MSB to LSB)
         let r: u32 = ((buffer[0] as u32) << 24) |
                      ((buffer[1] as u32) << 16) |
@@ -69,12 +88,20 @@ impl<SPI, CS, E> Max31855<SPI, CS>
     }
 
     /// Return the thermocouple temperature measurement
-    pub fn read_thermocouple(&mut self, unit: Units) -> Result<f32, E> {
+    pub fn read_thermocouple(&mut self, unit: Units) -> Result<f32, Error<E>> {
 
-        let raw = self.read_spi()?;
+        let raw = match self.read_spi() {
+            Ok(t) => t,
+            Err(e) => return Err(Error::SPIError(e))
+        };
 
         if raw.fault {
-            Ok(NAN)
+            Err(Error::SensorError(Max31855Error {
+                        scvfault: raw.scv,
+                        scgfault: raw.scg,
+                        ocfault: raw.oc
+                    }))
+
         } else {
             Ok(self.calibrate_thermocouple(raw.temperature, &unit))
         }
@@ -82,7 +109,7 @@ impl<SPI, CS, E> Max31855<SPI, CS>
 
     /// Returns all measurements from the MAX31855
     pub fn read_all(&mut self, unit: Units) -> Result<Measurement, E> {
-	
+
         let raw = self.read_spi()?;
 
         Ok(
@@ -94,7 +121,7 @@ impl<SPI, CS, E> Max31855<SPI, CS>
                 scg: raw.scg,
                 oc: raw.oc,
             }
-        ) 
+        )
     }
 
     /// Interface to convert temperature measurements from u16 to i16. Supports two sensors
@@ -102,12 +129,12 @@ impl<SPI, CS, E> Max31855<SPI, CS>
     ///     12 bit measurement
     fn to_i16(&mut self, unsigned_val: u16, sensor_type: SensorType) -> i16 {
         match sensor_type {
-            SensorType::HotRefJunction => 
+            SensorType::HotRefJunction =>
                  self.convert(
 		              unsigned_val,
 		              Convert {bit_num: 13, divisor: 4, bit_shift: 2}
-		         ), 
-            SensorType::ColdRefJunction => 
+		         ),
+            SensorType::ColdRefJunction =>
 		         self.convert(
 		              unsigned_val,
 		              Convert {bit_num: 11, divisor: 16, bit_shift: 4}
@@ -163,13 +190,13 @@ enum SensorType {
     ColdRefJunction,
 }
 
-/// Structure to convert different bit length 
+/// Structure to convert different bit length
 ///   measurements from i16 to u16
 struct Convert {
     bit_num: usize,
     divisor: i16,
     bit_shift: u8,
-} 
+}
 
 /// Calibrated measurements from MAX31855
 #[allow(dead_code)]
@@ -199,7 +226,7 @@ struct Raw {
     fault: bool,
     /// SCV fault
     scv: bool,
-    /// SCG fault  
+    /// SCG fault
     scg: bool,
     /// OC fault
     oc: bool,
